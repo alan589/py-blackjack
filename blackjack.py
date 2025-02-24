@@ -1,14 +1,13 @@
 import time
 from turtle import Screen
-from button import Button
 from card import Card
 from dealer import Dealer, DEALER_POSITION
 from player import Player
 from scoreboard import Scoreboard
+from tkinter import *
 from settings import SCREEN_WIDTH, TITLE, TABLE_BG, HIT_BUTTON_POS_X, STAND_BUTTON_POS_X, HIT_BUTTON_POS_Y, \
     STAND_BUTTON_POS_Y, HIT_TEXT, STAND_TEXT, HIT_COLOR, STAND_COLOR, SCREEN_HEIGHT, PLAYER_WIN_COLOR, \
-    PLAYER_LOSE_COLOR, BLACKJACK_COLOR
-
+    PLAYER_LOSE_COLOR, BLACKJACK_COLOR, TEXT_BUTTON_FONT, BUTTON_TEXT_COLOR
 
 
 class Blackjack:
@@ -87,12 +86,20 @@ class Blackjack:
         self.player = Player()
         self.scoreboard = Scoreboard()
 
-        self.hit_button = Button(HIT_BUTTON_POS_X, HIT_BUTTON_POS_Y, HIT_TEXT, HIT_COLOR)
-        self.stand_button = Button(STAND_BUTTON_POS_X, STAND_BUTTON_POS_Y, STAND_TEXT, STAND_COLOR)
+        self.root = self.screen.getcanvas()
+        self.hit_button = Button(self.root.master, text=HIT_TEXT, bg=HIT_COLOR, relief="groove", width=6,
+                                 font=TEXT_BUTTON_FONT, fg=BUTTON_TEXT_COLOR, cursor="hand2", activebackground=HIT_COLOR,
+                                 activeforeground=BUTTON_TEXT_COLOR,command=self.hit)
+        self.hit_button.pack()
+        self.root.create_window(HIT_BUTTON_POS_X, HIT_BUTTON_POS_Y, window=self.hit_button)
+
+        self.stand_button = Button(self.root.master, text=STAND_TEXT, bg=STAND_COLOR, relief="groove", width=6,
+                                 font=TEXT_BUTTON_FONT, fg=BUTTON_TEXT_COLOR, cursor="hand2", activebackground=STAND_COLOR,
+                                 activeforeground=BUTTON_TEXT_COLOR, command=self.stand)
+        self.stand_button.pack()
+        self.root.create_window(STAND_BUTTON_POS_X, STAND_BUTTON_POS_Y, window=self.stand_button)
 
         Card("stacked-cards.gif", 0)
-        self.screen.onclick(fun=self.button_click)
-
 
     def start_game(self):
         # deal two cards to each player and update the score
@@ -126,21 +133,12 @@ class Blackjack:
 
         self.screen.mainloop()
 
-
-    def button_click(self, x, y):
-
-        if STAND_BUTTON_POS_X < x < STAND_BUTTON_POS_X + 100 and STAND_BUTTON_POS_Y < y < STAND_BUTTON_POS_Y + 40:
-            self.stand()
-
-        if HIT_BUTTON_POS_X < x < HIT_BUTTON_POS_X + 100 and HIT_BUTTON_POS_Y < y < HIT_BUTTON_POS_Y + 40:
-            self.hit()
-
     def reveal_card(self):
         # reveal the hidden card
         for card in self.screen.turtles():
             if "back-card" in card.shape():
-                card.goto(card.xcor(), 400)
-                self.dealer.cards[1].goto(card.xcor(), 400)
+                card.goto(card.xcor(), self.dealer.pos + 200)
+                self.dealer.cards[1].goto(card.xcor(), self.dealer.pos + 200)
                 self.dealer.cards[1].showturtle()
                 self.dealer.cards[1].goto(card.xcor(), DEALER_POSITION)
                 self.scoreboard.update_dealer(self.dealer.cards[1].point)
@@ -193,27 +191,33 @@ class Blackjack:
             self.scoreboard.game_over(["Bust", "Dealer wins!"], PLAYER_LOSE_COLOR)
             self.restart_game()
 
+    def remove_cards(self, hand):
+        self.screen.tracer(0)
+        while hand.cards[-1].xcor() != 0:
+            for card in hand.cards:
+                if card.xcor() > 0:
+                    card.setheading(180)
+                else:
+                    card.setheading(0)
+                card.forward(1)
+            self.screen.update()
+
+        while hand.cards[-1].ycor() < SCREEN_HEIGHT:
+            for card in hand.cards:
+                card.setheading(90)
+                card.forward(1)
+            self.screen.update()
+        self.screen.tracer(1)
+
     def restart_game(self):
         # restart the game
 
-        time.sleep(5)
+        time.sleep(3)
         # reset score
         self.scoreboard.reset_score()
 
-        # remove the cards
-        self.screen.tracer(0)
-        for _ in range(100):
-            for card in self.dealer.cards:
-                card.setheading(90)
-                card.forward(2)
-            self.screen.update()
-
-        for _ in range(300):
-            for card in self.player.cards:
-                card.setheading(90)
-                card.forward(2)
-            self.screen.update()
-        self.screen.tracer(1)
+        self.remove_cards(self.dealer)
+        self.remove_cards(self.player)
 
         self.dealer.cards.clear()
         self.player.cards.clear()
